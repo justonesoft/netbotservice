@@ -22,9 +22,9 @@
       <scope>test</scope>
     </dependency>
     <dependency>
-    	<groupId>org.eclipse.jetty</groupId>
-    	<artifactId>jetty-server</artifactId>
-    	<version>9.0.1.v20130408</version>
+    	<groupId>org.glassfish.jersey.containers</groupId>
+    	<artifactId>jersey-container-jetty-servlet</artifactId>
+    	<version>2.22.1</version>
     </dependency>
   </dependencies>
   <build>
