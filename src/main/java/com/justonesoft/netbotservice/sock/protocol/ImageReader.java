@@ -1,4 +1,6 @@
-package com.justonesoft.netbotservice.socketcom;
+package com.justonesoft.netbotservice.sock.protocol;
+
+import com.justonesoft.netbotservice.sock.communication.ClosedChannelListener;
 
 public class ImageReader implements ClosedChannelListener {
 

@@ -1,4 +1,4 @@
-package com.justonesoft.netbotservice.socketcom;
+package com.justonesoft.netbotservice.sock.communication;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -10,6 +10,8 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.Set;
+
+import com.justonesoft.netbotservice.sock.protocol.ReaderManager;
 
 /*
  * Protocol for receiving images:

@@ -1,9 +1,11 @@
-package com.justonesoft.netbotservice.socketcom;
+package com.justonesoft.netbotservice.sock.protocol;
 
 import java.nio.ByteBuffer;
 
 import org.junit.Assert;
 import org.junit.Test;
+
+import com.justonesoft.netbotservice.sock.protocol.ReaderManager;
 
 
 public class ReadManagerTest {

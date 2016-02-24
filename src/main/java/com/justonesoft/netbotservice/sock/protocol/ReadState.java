@@ -1,4 +1,4 @@
-package com.justonesoft.netbotservice.socketcom;
+package com.justonesoft.netbotservice.sock.protocol;
 
 public enum ReadState {
 	NONE,
