@@ -11,13 +11,21 @@ import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.Set;
 
-public class BridgeSocketServer {
+/*
+ * Protocol for receiving images:
+ * start-char: #
+ * next-long-imagesize-in-bytes: long
+ * next-image-bytes: byte[]
+ */
+public class BridgeSocketServer extends Thread {
 	public static final int PORT = 9999;
+	private Selector selector;
+	private ReaderManager readerManager = new ReaderManager();
 	
 	// we need to have a pool of threads to allocate for read/write operations
 	// the select operation will happen on a separate thread
 	
-	public static void main(String[] args) throws IOException {
+	public BridgeSocketServer() throws IOException {
 		
 		String message = "I got your request";
 		ByteBuffer readBB = ByteBuffer.allocate(1024);
@@ -26,73 +34,77 @@ public class BridgeSocketServer {
 		writeBB.put(message.getBytes());
 		
 
-		Selector selector = Selector.open();
+		selector = Selector.open();
 		
 		ServerSocketChannel ssc = ServerSocketChannel.open();
 		ssc.configureBlocking( false );
 		
-		ServerSocket ss = ssc.socket();
-		
 		InetSocketAddress address = new InetSocketAddress( PORT );
-		ss.bind( address );
+		ssc.bind( address );
 		
-		SelectionKey sscKey = ssc.register( selector, SelectionKey.OP_ACCEPT );
-		
-		for (int z=0; z<10; z++) {
-			int num = selector.select();
-			
-			System.out.println("Run: " + z + "Selected: " + num);
-			
-			Set<SelectionKey> selectedKeys = selector.selectedKeys();
-			
-			Iterator<SelectionKey> keysIterator = selectedKeys.iterator();
-			
-			while (keysIterator.hasNext()) {
-				SelectionKey key =  keysIterator.next();
-				keysIterator.remove();
+		ssc.register( selector, SelectionKey.OP_ACCEPT );
+	}
+	
+	public static void main(String[] args) throws IOException, InterruptedException {
+		BridgeSocketServer bridge = new BridgeSocketServer();
+		bridge.start();
+		bridge.join();
+	}
+	
+	@Override
+	public void run() {
+		try {
+			while (true) {
+				// blocking
+				selector.select();
 				
-				if ((key.readyOps() & SelectionKey.OP_ACCEPT) == SelectionKey.OP_ACCEPT) {
-					ServerSocketChannel serverChannel = (ServerSocketChannel)key.channel();
-					SocketChannel sc = ssc.accept();
+				Set<SelectionKey> selectedKeys = selector.selectedKeys();
+				
+				Iterator<SelectionKey> keysIterator = selectedKeys.iterator();
+				
+				while (keysIterator.hasNext()) {
+					SelectionKey key =  keysIterator.next();
+					keysIterator.remove();
 					
-					sc.configureBlocking( false );
-					SelectionKey newKey = sc.register( selector, SelectionKey.OP_READ | SelectionKey.OP_WRITE);
-					
-					System.out.println("Run: "+z+"ACCEPT");
-				} 
-				if ((key.readyOps() & SelectionKey.OP_READ)
-						== SelectionKey.OP_READ) {
-					// Read the data
-					SocketChannel sc = (SocketChannel)key.channel();
-					// ...
-					int bytesRead = sc.read(readBB);
-					
-					readBB.rewind();
-					System.out.println("Run: "+z+" READ: " + bytesRead);
-					for (int i=0; i < bytesRead; i++)
-					{
-						System.out.print((char)readBB.get());
+					if ((key.readyOps() & SelectionKey.OP_ACCEPT) == SelectionKey.OP_ACCEPT) {
+						ServerSocketChannel serverChannel = (ServerSocketChannel)key.channel();
+						SocketChannel sc = serverChannel.accept();
+						
+						sc.configureBlocking( false );
+						sc.register( selector, SelectionKey.OP_READ, new ReaderManager());
+						
+						keysIterator.remove();
+					} 
+					if (key.isReadable()) {
+						// Read the data
+						SocketChannel sc = (SocketChannel)key.channel();
+						keysIterator.remove();
+						ReaderManager rm = (ReaderManager) key.attachment();
+						
+						readerManager.readFromChannel(sc);
 					}
-				}
-				
-				if ((key.readyOps() & SelectionKey.OP_WRITE)
-						== SelectionKey.OP_WRITE) {
-					// Read the data
-					SocketChannel sc = (SocketChannel)key.channel();
 					
-					System.out.println("Run: "+z+" WRITE: ");
-					
-					writeBB.rewind();
-					
-					sc.write(writeBB);
-					
-					
-					sc.close();
+					if ((key.readyOps() & SelectionKey.OP_WRITE)
+							== SelectionKey.OP_WRITE) {
+						// Read the data
+//						SocketChannel sc = (SocketChannel)key.channel();
+//						keysIterator.remove();
+//						
+//						System.out.println("Run: "+z+" WRITE: ");
+//						
+//						writeBB.rewind();
+//						
+//						sc.write(writeBB);
+//						
+//						
+//						sc.close();
+
+					}
 
 				}
-
 			}
+		} catch (Exception e) {
+			e.printStackTrace();
 		}
-
 	}
 }
