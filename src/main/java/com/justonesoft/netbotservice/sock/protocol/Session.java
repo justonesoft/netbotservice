@@ -2,11 +2,11 @@ package com.justonesoft.netbotservice.sock.protocol;
 
 public class Session {
 	private SessionState state;
-	private ReaderManager reader;
+	private ImageReader reader;
 	
 	public Session() {
 		this.state = SessionState.ANONYMOUS;
-		this.reader = new ReaderManager();
+		this.reader = new ImageReader();
 	}
 	
 	public void connected() {

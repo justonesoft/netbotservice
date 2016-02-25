@@ -5,10 +5,10 @@ import java.nio.ByteBuffer;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.justonesoft.netbotservice.sock.protocol.ReaderManager;
+import com.justonesoft.netbotservice.sock.protocol.ImageReader;
 
 
-public class ReadManagerTest {
+public class ImageReaderTest {
 	
 	@Test
 	public void testReadFullImage() {
@@ -22,7 +22,7 @@ public class ReadManagerTest {
 		
 		src.flip();
 		
-		ReaderManager rm = new ReaderManager();
+		ImageReader rm = new ImageReader();
 		
 		rm.processReadBuffer(src, 4 + imageData.length());
 		
@@ -46,7 +46,7 @@ public class ReadManagerTest {
 		partialBuffer.putInt(size);
 		partialBuffer.rewind();
 
-		ReaderManager rm = new ReaderManager();
+		ImageReader rm = new ImageReader();
 		
 		// split the image size part in 1 + 1+ 2 bytes
 		rm.processReadBuffer(partialBuffer, 1);
@@ -85,7 +85,7 @@ public class ReadManagerTest {
 		partialBuffer.put(imageData1.getBytes());
 		partialBuffer.rewind();
 
-		ReaderManager rm = new ReaderManager();
+		ImageReader rm = new ImageReader();
 		
 		// split the image size part in 1 + 1+ 2 bytes
 		rm.processReadBuffer(partialBuffer, 4+imageData1.length());

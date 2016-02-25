@@ -11,7 +11,7 @@ import java.nio.channels.SocketChannel;
 import java.util.Iterator;
 import java.util.Set;
 
-import com.justonesoft.netbotservice.sock.protocol.ReaderManager;
+import com.justonesoft.netbotservice.sock.protocol.ImageReader;
 
 /*
  * Protocol for receiving images:
@@ -22,7 +22,7 @@ import com.justonesoft.netbotservice.sock.protocol.ReaderManager;
 public class BridgeSocketServer extends Thread {
 	public static final int PORT = 9999;
 	private Selector selector;
-	private ReaderManager readerManager = new ReaderManager();
+	private ImageReader readerManager = new ImageReader();
 	
 	// we need to have a pool of threads to allocate for read/write operations
 	// the select operation will happen on a separate thread
@@ -30,7 +30,6 @@ public class BridgeSocketServer extends Thread {
 	public BridgeSocketServer() throws IOException {
 		
 		String message = "I got your request";
-		ByteBuffer readBB = ByteBuffer.allocate(1024);
 		ByteBuffer writeBB = ByteBuffer.allocate(message.length());
 		
 		writeBB.put(message.getBytes());
@@ -68,26 +67,36 @@ public class BridgeSocketServer extends Thread {
 					SelectionKey key =  keysIterator.next();
 					keysIterator.remove();
 					
-					if ((key.readyOps() & SelectionKey.OP_ACCEPT) == SelectionKey.OP_ACCEPT) {
+					if (!key.isValid()) continue;
+					
+					if (key.isAcceptable()) {
 						ServerSocketChannel serverChannel = (ServerSocketChannel)key.channel();
 						SocketChannel sc = serverChannel.accept();
 						
 						sc.configureBlocking( false );
-						sc.register( selector, SelectionKey.OP_READ, new ReaderManager());
+						sc.register( selector, SelectionKey.OP_READ, new ImageReader());
 						
-						keysIterator.remove();
+						System.out.println(Thread.currentThread().getName() + " accepted client");
 					} 
-					if (key.isReadable()) {
+					
+					if (key.isValid() && key.isReadable()) {
 						// Read the data
 						SocketChannel sc = (SocketChannel)key.channel();
-						keysIterator.remove();
-						ReaderManager rm = (ReaderManager) key.attachment();
+						ImageReader rm = (ImageReader) key.attachment();
+
 						
-						readerManager.readFromChannel(sc);
+						System.out.println(Thread.currentThread().getName() + " start reading thread.");
+						/*
+						 * Start a thread to read from SC
+						 * a Reader is a thread that reads from socketChannel into the device internal data
+						 * 
+						 */
+						rm.readFromChannel(sc);
+						
+						System.out.println(Thread.currentThread().getName() + " return to loop after starting reading thread");
 					}
 					
-					if ((key.readyOps() & SelectionKey.OP_WRITE)
-							== SelectionKey.OP_WRITE) {
+					if (key.isValid() && key.isReadable()) {
 						// Read the data
 //						SocketChannel sc = (SocketChannel)key.channel();
 //						keysIterator.remove();
