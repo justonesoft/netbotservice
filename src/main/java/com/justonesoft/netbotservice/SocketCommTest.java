@@ -1,5 +1,7 @@
 package com.justonesoft.netbotservice;
 
+import java.io.File;
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -10,25 +12,29 @@ import com.justonesoft.netbotservice.sock.communication.BridgeSocketServer;
 
 public class SocketCommTest {
 	
-	private static final int PORT = BridgeSocketServer.PORT;
+	private static final int PORT = BridgeSocketServer.SOCKET_SERVER_PORT;
+	
+	private static final String sampleName = "sample.jpg";
 	
 	public static void main(String[] args) throws IOException {
 		
+		File sampleFile = new File(sampleName);
+		
+		int size = (int)sampleFile.length();
+		
+		byte[] byteData = new byte[size];
+		
 		// prepare the bytes
 		// will send 100 bytes of data plus 4 bytes as int representing the value 100 this is the ImageReader protocol
-		int size = 100;
-		ByteBuffer data = ByteBuffer.allocate(104);
+		ByteBuffer data = ByteBuffer.allocate((int)size+4);
 		
 		data.putInt(size);
 		
-		Random rand = new Random();
-		byte[] byteData = new byte[size];
+		FileInputStream fis = new FileInputStream(sampleFile);
 		
-		rand.nextBytes(byteData);
-		
-		for (int i=0; i<size; i++) {
-			System.out.print(byteData[i]+", ");
-		}
+		fis.read(byteData);
+
+		fis.close();
 		
 		data.put(byteData);
 		
