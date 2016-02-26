@@ -8,17 +8,12 @@ import java.util.Map;
 /**
  * 
  * @author bmunteanu
- * @Singleton
+ *
  */
 public class DeviceRegistry {
 	
-	private Map<String, List<Device>> registeredDevices = new HashMap<String, List<Device>>(); //TODO add an initial capacity
+	private static Map<String, List<Device>> registeredDevices = new HashMap<String, List<Device>>(); //TODO add an initial capacity
 	
-	private static DeviceRegistry instance = new DeviceRegistry();
-	
-	public static DeviceRegistry getInstance() {
-		return instance;
-	}
 	/**
 	 * Add a device to the registered devices. <br />
 	 * If the device is already in the list will not be added again.
@@ -48,9 +43,5 @@ public class DeviceRegistry {
 				devices.add(device);
 			}
 		}
-	}
-	
-	public List<Device> getDevicesList(String owner) {
-		return registeredDevices.get(owner);
 	}
 }

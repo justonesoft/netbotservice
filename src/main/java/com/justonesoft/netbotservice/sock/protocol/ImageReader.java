@@ -6,10 +6,17 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
-import java.util.ArrayList;
-import java.util.List;
+import java.security.GeneralSecurityException;
+import java.util.Arrays;
+import java.util.Queue;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.FutureTask;
+
+import org.eclipse.jetty.util.BlockingArrayQueue;
 
 /**
  * Receives a buffer and tries to read an image out of it
@@ -20,97 +27,68 @@ import java.util.concurrent.BlockingQueue;
  * processes the whole buffer and checks if a new image is about to arrive
  */
 public class ImageReader {
-	private final int IMAGE_LENGTH_BYTES = 4; // 4 bytes / 1 integer
-	private final int MAX_IMAGE_SIZE = 10 * 1024; // 2K bytes
 	
-	private final int PROCESSING_QUEUE_SIZE = 10;
-	private final int CHUNK_BYTES_SIZE_TO_READ_FROM_CHANNEL = 100; // how many bytes to try to read at once from SocketChannel
+	private static ExecutorService service = Executors.newFixedThreadPool(10);// 10 threads in the pool
 	
-	// we store the image length in one integer aka 4 bytes
-	private ByteBuffer imageSizeBuffer = ByteBuffer.allocate(IMAGE_LENGTH_BYTES); // store the bytes composing the image size
-	private ByteBuffer imageBuffer = ByteBuffer.allocate(MAX_IMAGE_SIZE); // store the bytes composing the image
-
-	/**
-	 * After data is read from SocketChannel, the bytes will be added to this BlockingQueue.
-	 */
-	private final BlockingQueue<byte[]> processQueue = new ArrayBlockingQueue<byte[]>(PROCESSING_QUEUE_SIZE);
+	private final BlockingQueue<byte[]> processQueue = new ArrayBlockingQueue<byte[]>(10);
 	
-	/**
-	 * All the listeners that need to be notified when an image is ready are stored here
-	 */
-	private List<ImageReadyListener> imageReadyListeners;
-	
-	/**
-	 * This thread will read from the queue the bytes composing the image and will process them so that the full image can be received.
-	 */
 	private Thread reader = new Thread(new Runnable() {
 		
 		public void run() {
 			while (true) { // TODO maybe not true, leave room for terminating
 				byte[] nextChunk = null;
 				try {
-
-					nextChunk = processQueue.take(); // blocks until data is available or interupted
-					processReadBuffer(nextChunk);
-					
+					nextChunk = processQueue.take();
 				} catch (InterruptedException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
+				processReadBuffer(nextChunk);
 			}
 			
 		}
 	});
 	
+	private final int IMAGE_LENGTH_BYTES = 4;
+	private final int MAX_IMAGE_SIZE = 2 * 1024; // 2K bytes
 	
 	private ReadState state = ReadState.NONE;
 	private int currentImageSize = 0;
-
-	public ImageReader() {
-		imageReadyListeners = new ArrayList<ImageReadyListener>();
-		reader.start();
-		reset();
-	}
+	
+	// we store the image length in one int aka 4 bytes
+	private ByteBuffer imageSizeBuffer = ByteBuffer.allocate(IMAGE_LENGTH_BYTES);
+	private ByteBuffer imageBuffer = ByteBuffer.allocate(MAX_IMAGE_SIZE);
+	
+	private Object readingLock = new Object();
+	private volatile boolean readingOrClosed = false;
 	
 	/**
+	 * All the read operations go through this entity
+	 * Knows to handle all types of data:
+	 * 	- images
+	 *  - responses
+	 *  - text messages
+	 *  - sensor value
+	 *  
 	 * 
-	 * @param listener
-	 * @NotThreadSafe
 	 */
-	public void registerImageReadyListener(ImageReadyListener listener) {
-		this.imageReadyListeners.add(listener);
-	}
 	
-	private void imageReady() {
-		notifyImageReady();
-		reset();
-	}
-	
-	private void notifyImageReady() {
-		
-		byte[] imageData = new byte[currentImageSize];
-		
-		imageBuffer.rewind();
-		imageBuffer.get(imageData);
-		
-		ImageReadyEvent event = new ImageReadyEvent(imageData);
-		
-		for (ImageReadyListener listener : imageReadyListeners) {
-			listener.onImageReady(event);
-		}
+	public ImageReader() {
+		reader.start();
 	}
 	
 	public void readFromChannel(final SocketChannel sc) {
 		try {
 			if (!sc.isOpen()) return;
 			
-			final ByteBuffer readBB = ByteBuffer.allocate(CHUNK_BYTES_SIZE_TO_READ_FROM_CHANNEL);
+			final ByteBuffer readBB = ByteBuffer.allocate(10);
 			final int bytesRead = sc.read(readBB);
 	
 			if (bytesRead == 0) return;
 			
 			if (bytesRead < 0) {
 				// this socket channel has been closed
+				System.out.println(Thread.currentThread().getName() + " closing channel " + sc);
 				sc.close();
 				return;
 			}
@@ -118,8 +96,16 @@ public class ImageReader {
 			byte[] source = new byte[bytesRead];
 			readBB.rewind();
 			readBB.get(source);
-			
 			processQueue.put(source);
+//			readBB.rewind();
+//	
+//			service.execute(new Runnable() {
+//				
+//				public void run() {
+//					processReadBuffer(readBB, bytesRead);
+//				}
+//
+//			});
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -143,7 +129,7 @@ public class ImageReader {
 				// have the full image size
 				currentImageSize = readBB.getInt();
 				state = ReadState.IMAGE_INCOMPLETE; // we can now read the image data
-				processReadBuffer(readBB, availableBytes - IMAGE_LENGTH_BYTES);
+				processReadBuffer(readBB, availableBytes - 4);
 			} else {
 				// not enough bytes to compose the image size
 				// store what we have in internal buffer
@@ -178,7 +164,7 @@ public class ImageReader {
 				readBB.get(remaining);
 				imageBuffer.put(remaining);
 				state = ReadState.NONE;
-				imageReady();
+				saveAsFile();
 				reset();
 			} else {
 				// put everything in the image buffer 
@@ -191,6 +177,8 @@ public class ImageReader {
 	}
 	
 	public void processReadBuffer (byte[] source) {
+		// DO NOT FLIP THE BUFFER HERE
+		
 		switch (state) {
 		
 		case NONE:
@@ -199,13 +187,12 @@ public class ImageReader {
 			if (source.length >= IMAGE_LENGTH_BYTES) {
 				// have the full image size
 				
-				imageSizeBuffer.put(source, 0, IMAGE_LENGTH_BYTES);
+				imageSizeBuffer.put(source, 0, 4);
 				imageSizeBuffer.rewind();
 				currentImageSize = imageSizeBuffer.getInt();
-				
 				state = ReadState.IMAGE_INCOMPLETE; // we can now read the image data
-				byte[] restCopy = new byte[source.length-IMAGE_LENGTH_BYTES];
-				System.arraycopy(source, IMAGE_LENGTH_BYTES, restCopy, 0, source.length-IMAGE_LENGTH_BYTES);
+				byte[] restCopy = new byte[source.length-4];
+				System.arraycopy(source, 4, restCopy, 0, source.length-4);
 				processReadBuffer(restCopy);
 			} else {
 				// not enough bytes to compose the image size
@@ -243,7 +230,7 @@ public class ImageReader {
 					imageBuffer.put(source[i]);
 				}
 				state = ReadState.NONE;
-				imageReady();
+				saveAsFile();
 				reset();
 			} else {
 				// put everything in the image buffer 
@@ -285,7 +272,6 @@ public class ImageReader {
 		imageSizeBuffer.rewind();
 		currentImageSize = 0;
 	}
-	
 	ByteBuffer getImageData() {
 		return imageBuffer;
 	}
