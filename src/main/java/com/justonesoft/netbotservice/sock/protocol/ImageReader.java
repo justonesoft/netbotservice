@@ -21,10 +21,10 @@ import java.util.concurrent.BlockingQueue;
  */
 public class ImageReader {
 	private final int IMAGE_LENGTH_BYTES = 4; // 4 bytes / 1 integer
-	private final int MAX_IMAGE_SIZE = 10 * 1024; // 2K bytes
+	private final int MAX_IMAGE_SIZE = 100 * 1024; // 100K bytes
 	
 	private final int PROCESSING_QUEUE_SIZE = 10;
-	private final int CHUNK_BYTES_SIZE_TO_READ_FROM_CHANNEL = 100; // how many bytes to try to read at once from SocketChannel
+	private final int CHUNK_BYTES_SIZE_TO_READ_FROM_CHANNEL = 1024; // how many bytes to try to read at once from SocketChannel
 	
 	// we store the image length in one integer aka 4 bytes
 	private ByteBuffer imageSizeBuffer = ByteBuffer.allocate(IMAGE_LENGTH_BYTES); // store the bytes composing the image size
@@ -83,7 +83,6 @@ public class ImageReader {
 	
 	private void imageReady() {
 		notifyImageReady();
-		reset();
 	}
 	
 	private void notifyImageReady() {
@@ -176,14 +175,14 @@ public class ImageReader {
 				// we can read the whole image
 				byte[] remaining = new byte[bytesNeededForCompleteImage];
 				readBB.get(remaining);
-				imageBuffer.put(remaining);
+				imageBuffer.put(remaining, 0, imageBuffer.position() + remaining.length > MAX_IMAGE_SIZE ? MAX_IMAGE_SIZE - imageBuffer.position() : remaining.length);
 				state = ReadState.NONE;
 				imageReady();
 				reset();
 			} else {
 				// put everything in the image buffer 
 				byte[] remaining = new byte[availableBytes];
-				readBB.get(remaining);
+				readBB.get(remaining, 0, imageBuffer.position() + remaining.length > MAX_IMAGE_SIZE ? MAX_IMAGE_SIZE - imageBuffer.position() : remaining.length);
 				imageBuffer.put(remaining);
 			}
 			break;
@@ -191,6 +190,10 @@ public class ImageReader {
 	}
 	
 	public void processReadBuffer (byte[] source) {
+
+		//System.out.println(state + " buffer size: " + source.length);
+		if (source.length == 0) return;
+		
 		switch (state) {
 		
 		case NONE:
@@ -202,8 +205,13 @@ public class ImageReader {
 				imageSizeBuffer.put(source, 0, IMAGE_LENGTH_BYTES);
 				imageSizeBuffer.rewind();
 				currentImageSize = imageSizeBuffer.getInt();
-				
+				System.out.println("NONE - Image size: " + currentImageSize);
+				imageBuffer = ByteBuffer.allocate(currentImageSize);
+
 				state = ReadState.IMAGE_INCOMPLETE; // we can now read the image data
+				
+				if (source.length == IMAGE_LENGTH_BYTES) return; // there is no more data left to process
+				
 				byte[] restCopy = new byte[source.length-IMAGE_LENGTH_BYTES];
 				System.arraycopy(source, IMAGE_LENGTH_BYTES, restCopy, 0, source.length-IMAGE_LENGTH_BYTES);
 				processReadBuffer(restCopy);
@@ -225,7 +233,12 @@ public class ImageReader {
 					imageSizeBuffer.put(source[i]);
 				}
 				currentImageSize = ((ByteBuffer)imageSizeBuffer.rewind()).getInt();
+				System.out.println("IMAGE_LENGTH - Image size: " + currentImageSize);
+				imageBuffer = ByteBuffer.allocate(currentImageSize);
 				state = ReadState.IMAGE_INCOMPLETE; // we can now read the image data
+				
+				if (source.length == bytesNeeded) return; // there is no more data left to process
+				
 				byte[] restCopy = new byte[source.length-bytesNeeded];
 				System.arraycopy(source, bytesNeeded, restCopy, 0, source.length-bytesNeeded);
 				processReadBuffer(restCopy);
@@ -237,14 +250,22 @@ public class ImageReader {
 			break;
 		case IMAGE_INCOMPLETE:
 			int bytesNeededForCompleteImage = currentImageSize - imageBuffer.position();
+			
 			if (source.length >= bytesNeededForCompleteImage) {
 				// we can read the whole image
 				for (int i=0; i<bytesNeededForCompleteImage; i++) {
 					imageBuffer.put(source[i]);
 				}
+				System.out.println("Image ready: " + imageBuffer.position() + " / " + imageBuffer.limit());
 				state = ReadState.NONE;
 				imageReady();
 				reset();
+				if (source.length > bytesNeededForCompleteImage) {
+					// there is more data left to process, from the next picture probably
+					byte[] restCopy = new byte[source.length-bytesNeededForCompleteImage];
+					System.arraycopy(source, bytesNeededForCompleteImage, restCopy, 0, source.length-bytesNeededForCompleteImage);
+					processReadBuffer(restCopy);
+				}
 			} else {
 				// put everything in the image buffer 
 				for (int i=0; i<source.length; i++) {
@@ -254,7 +275,7 @@ public class ImageReader {
 			break;
 		}	
 	}
-
+	
 	private void saveAsFile() {
 		String fileName = "image_"+System.currentTimeMillis()+".jpg";
 		try {

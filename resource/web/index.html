@@ -1,10 +1,28 @@
 <!DOCTYPE html>
 <html>
 <head>
-<meta charset="ISO-8859-1">
-<title>Insert title here</title>
-</head>
+<script type="text/javascript"> 
+var delay=0.5;
+var Mutex = 0;
+var url="http://localhost:9998/cp/owner/ANONYMOUS/device/N%2FA/lastImage";
+
+var counter = 0;
+function load_jpeg()
+{
+      if(Mutex == 0)
+      {
+            Mutex = 1;
+			var time = (new Date()).getTime();
+            document.getElementById("stream").src = url+"?_=" + time;
+            setTimeout('load_jpeg()',delay*1000);
+            Mutex = 0;
+       }
+}
+
+setTimeout('load_jpeg()',1000);
+
+</script> 
+</head> 
 <body>
-	This is index page
-</body>
+	<img width="360" height="240" id="stream" src="http://localhost:9998/cp/owner/ANONYMOUS/device/N%2FA/lastImage" />
 </html>

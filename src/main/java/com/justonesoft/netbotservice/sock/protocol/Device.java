@@ -42,7 +42,7 @@ public class Device implements ImageReadyListener {
 	 */
 	public void onImageReady(ImageReadyEvent event) {
 		lastImage = event.getData();
-		saveAsFile();
+//		saveAsFile();
 	}
 
 	@Override

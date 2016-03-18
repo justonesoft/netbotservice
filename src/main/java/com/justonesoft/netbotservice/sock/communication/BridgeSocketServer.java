@@ -60,7 +60,7 @@ public class BridgeSocketServer extends Thread {
 						sc.configureBlocking( false );
 						
 						Device device = new Device();
-						
+						System.out.println(Thread.currentThread().getName() + " register socket.");
 						DeviceRegistry.getInstance().register(device);
 						sc.register( selector, SelectionKey.OP_READ, device);
 						
@@ -72,7 +72,7 @@ public class BridgeSocketServer extends Thread {
 						Device device = (Device) key.attachment();
 
 						
-						System.out.println(Thread.currentThread().getName() + " start reading thread.");
+//						System.out.println(Thread.currentThread().getName() + " start reading thread.");
 						device.readFromChannel(sc);
 					}
 					

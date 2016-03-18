@@ -30,6 +30,10 @@ public class ControlPanel {
 		
 		List<Device> devices = DeviceRegistry.getInstance().getDevicesList(owner);
 		
+		if (devices == null) {
+			throw new WebApplicationException(Status.NOT_FOUND);
+		}
+		
 		for (Device device : devices) {
 			if (device.getName().equals(deviceName)) {
 				return device.getLastImage();
