@@ -4,7 +4,10 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.BlockingQueue;
 
 public class Device implements ImageReadyListener {
 	private String name;
@@ -16,7 +19,16 @@ public class Device implements ImageReadyListener {
 	private byte[] lastImage; // or store it to a file and keep the file name/location
 	
 	private final ImageReader imageReader;
-	
+
+	private final BlockingQueue<Byte> writingQueue = new ArrayBlockingQueue<Byte>(10);
+	private SocketChannel sc;
+
+	public Device(SocketChannel sc) {
+		this();
+		
+		writeToChannel(sc);
+		
+	}
 	public Device() {
 		this.name = "N/A";
 		this.owner = "ANONYMOUS";
@@ -35,6 +47,46 @@ public class Device implements ImageReadyListener {
 
 	public void readFromChannel(final SocketChannel sc) {
 		imageReader.readFromChannel(sc);
+	}
+	
+	public void writeToChannel(final SocketChannel sc) {
+		new Thread(new Runnable() {
+			
+			public void run() {
+				ByteBuffer buffer = ByteBuffer.allocate(1);
+				while (sc.isConnected()) {
+					try {
+						System.out.println("Waiting for data to write");
+						Byte dataToSend = writingQueue.take();
+						System.out.println("Writing " + dataToSend.intValue());
+						buffer.put(dataToSend.byteValue());
+						buffer.rewind();
+						while (buffer.hasRemaining()) {
+							sc.write(buffer);
+						}
+						buffer.rewind();
+
+					} catch (InterruptedException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					} catch (IOException e) {
+						// TODO Auto-generated catch block
+						e.printStackTrace();
+					}
+				}
+				
+			}
+		}).start();
+	}
+	
+	public void write(byte whatToWrite) {
+		try {
+			System.out.println("Submiting " + whatToWrite + " for writing");
+			writingQueue.put(Byte.valueOf(whatToWrite));
+		} catch (InterruptedException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	}
 	
 	/**

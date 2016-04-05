@@ -59,7 +59,7 @@ public class BridgeSocketServer extends Thread {
 						SocketChannel sc = serverChannel.accept();
 						sc.configureBlocking( false );
 						
-						Device device = new Device();
+						Device device = new Device(sc);
 						System.out.println(Thread.currentThread().getName() + " register socket.");
 						DeviceRegistry.getInstance().register(device);
 						sc.register( selector, SelectionKey.OP_READ, device);
@@ -76,21 +76,14 @@ public class BridgeSocketServer extends Thread {
 						device.readFromChannel(sc);
 					}
 					
-					if (key.isValid() && key.isWritable()) {
-						// Read the data
+//					if (key.isValid() && key.isWritable()) {
+//						// Read the data
 //						SocketChannel sc = (SocketChannel)key.channel();
-//						keysIterator.remove();
+//						Device device = (Device) key.attachment();
 //						
-//						System.out.println("Run: "+z+" WRITE: ");
-//						
-//						writeBB.rewind();
-//						
-//						sc.write(writeBB);
-//						
-//						
-//						sc.close();
-
-					}
+//						System.out.println(" WRITE: ");
+//						device.writeToChannel(sc);
+//					}
 
 				}
 			}
