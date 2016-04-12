@@ -50,7 +50,7 @@ public class ControlPanel {
 	@POST
 	@Path("owner/{owner}/device/{device}/sendCommand")
 	public void sendCommandFromQuery(@PathParam("owner") String owner,
-			@PathParam("device") String deviceName, @QueryParam("cmd") byte command) {
+			@PathParam("device") String deviceName, @QueryParam("type") byte type, @QueryParam("cmd") byte command) {
 		
 		List<Device> devices = DeviceRegistry.getInstance().getDevicesList(owner);
 		
@@ -67,7 +67,8 @@ public class ControlPanel {
 		}
 		
 		if (targetDevide != null) {
-			targetDevide.write(command);
+			targetDevide.sendThis(type);
+			targetDevide.sendThis(command);
 		} else {
 			System.out.println("Device not found");
 			throw new WebApplicationException(Status.NOT_FOUND);

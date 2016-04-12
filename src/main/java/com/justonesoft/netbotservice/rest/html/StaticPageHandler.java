@@ -15,7 +15,7 @@ import javax.ws.rs.core.Response;
 @Singleton
 public class StaticPageHandler {
 	
-	private final String CONTEXT = "resource/web";
+	private final String CONTEXT = "web";
 	
 	@GET
 	@Produces(MediaType.TEXT_HTML)

@@ -60,6 +60,7 @@ public class BridgeSocketServer extends Thread {
 						sc.configureBlocking( false );
 						
 						Device device = new Device(sc);
+						
 						System.out.println(Thread.currentThread().getName() + " register socket.");
 						DeviceRegistry.getInstance().register(device);
 						sc.register( selector, SelectionKey.OP_READ, device);

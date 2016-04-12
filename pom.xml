@@ -4,7 +4,7 @@
 
   <groupId>com.justonesoft</groupId>
   <artifactId>netbotservice</artifactId>
-  <version>0.0.1-SNAPSHOT</version>
+  <version>0.0.8-SNAPSHOT</version>
   <packaging>jar</packaging>
 
   <name>netbotservice</name>
@@ -27,19 +27,76 @@
     </dependency>
   </dependencies>
   <build>
+	<outputDirectory>target/root/classes</outputDirectory>
+	<resources>
+			<!-- copy what it is in <directory> to <targetPath>; <targetPath> is relative to <outputDirectory> -->
+		<resource>
+			<targetPath>./</targetPath>
+			<directory>src/main/conf</directory>
+		</resource>
+		<resource>
+			<targetPath>../test</targetPath>
+			<directory>src/test/java</directory>
+		</resource>
+		<resource>
+			<targetPath>../db</targetPath>
+			<directory>src/main/db</directory>
+		</resource>
+		<resource>
+			<targetPath>./</targetPath>
+			<directory>src/main/resource</directory>
+			<excludes>
+				<exclude>web/**</exclude>
+			</excludes>
+		</resource>
+		<resource>
+			<targetPath>../web</targetPath>
+			<directory>src/main/resource/web</directory>
+		</resource>
+		<resource>
+			<!-- copy the pom.xml to the root so we read it in the app -->
+			<targetPath>../</targetPath>
+			<directory>.</directory>
+			<includes>
+				<include>pom.xml</include>
+			</includes>
+		</resource>
+	</resources>
+
   	<plugins>
-  		<plugin>
-  			<groupId>org.apache.maven.plugins</groupId>
-  			<artifactId>maven-jar-plugin</artifactId>
-  			<version>2.4</version>
-  			<configuration>
-  				<archive>
-  					<manifest>
-  						<mainClass>com.justonesoft.netbotservice.App</mainClass>
-  					</manifest>
-  				</archive>
-  			</configuration>
-  		</plugin>
+		<!-- creates the zip file containing the required classes and resources for application to run -->
+	  	<plugin>
+	        <artifactId>maven-assembly-plugin</artifactId>
+	        <version>2.6</version>
+			<configuration>
+			  <descriptors>
+				<descriptor>src/main/assembly/assemble.xml</descriptor>
+			  </descriptors>
+			</configuration>
+        </plugin>
+		<!-- include the project dependencies jars into the lib folder so that application is runnable anywhere -->
+		<plugin>
+			<groupId>org.apache.maven.plugins</groupId>
+			<artifactId>maven-dependency-plugin</artifactId>
+			<version>2.10</version>
+			<inherited>true</inherited>
+			<executions>
+				<execution>
+					<id>copy-dependencies</id>
+					<phase>package</phase>
+					<goals>
+						<goal>copy-dependencies</goal>
+					</goals>
+					<configuration>
+						<outputDirectory>${project.build.directory}/root/lib</outputDirectory>
+						<overWriteReleases>false</overWriteReleases>
+						<overWriteSnapshots>true</overWriteSnapshots>
+						<excludeTransitive>false</excludeTransitive>
+						<includeScope>runtime</includeScope>
+					</configuration>
+				</execution>
+			</executions>
+		</plugin>
   	</plugins>
   </build>
 </project>

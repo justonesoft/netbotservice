@@ -79,7 +79,7 @@ public class Device implements ImageReadyListener {
 		}).start();
 	}
 	
-	public void write(byte whatToWrite) {
+	public void sendThis(byte whatToWrite) {
 		try {
 			System.out.println("Submiting " + whatToWrite + " for writing");
 			writingQueue.put(Byte.valueOf(whatToWrite));
