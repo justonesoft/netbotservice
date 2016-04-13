@@ -82,7 +82,7 @@ public class Device implements ImageReadyListener {
 	public void sendThis(byte whatToWrite) {
 		try {
 			System.out.println("Submiting " + whatToWrite + " for writing");
-			writingQueue.put(Byte.valueOf(whatToWrite));
+			writingQueue.put(Byte.valueOf(whatToWrite)); // this will block if nothing consumes the added bytes. for example if SocketChannel gets disconnected
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

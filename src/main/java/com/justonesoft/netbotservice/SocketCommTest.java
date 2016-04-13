@@ -14,7 +14,7 @@ public class SocketCommTest {
 	
 	private static final int PORT = BridgeSocketServer.SOCKET_SERVER_PORT;
 	
-	private static final String sampleName = "sample.jpg";
+	private static final String sampleName = "pom.xml";
 	
 	public static void main(String[] args) throws IOException {
 		
@@ -42,7 +42,7 @@ public class SocketCommTest {
 		
 		Socket clientSocket = new Socket();
 		
-		clientSocket.connect(new InetSocketAddress(PORT));
+		clientSocket.connect(new InetSocketAddress( "52.26.154.254", PORT));
 		
 		byte[] firstFourBytes = new byte[4];
 		data.get(firstFourBytes);

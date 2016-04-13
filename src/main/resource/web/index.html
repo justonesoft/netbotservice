@@ -2,6 +2,7 @@
 <html>
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<script type="text/javascript" src="scripts%2Fjquery-1.12.3.min.js"> </script>
 
 <script type="text/javascript"> 
 var delay=0.5;
@@ -22,25 +23,44 @@ function load_jpeg()
 }
 
 //setTimeout('load_jpeg()',1000);
+function mouseDown(cmd) {
+	var serverAddress = document.getElementById("address").value;
+	$.ajax({
+		  	url: "http://"+serverAddress+":9998/cp/owner/ANONYMOUS/device/N%2FA/sendCommand?_="+new Date().getTime()+"&type=1&cmd="+cmd,
+			method: "POST"
+	});
+}
 
+function mouseUp() {
+    document.getElementById("test").style.color = "green";
+}
+
+function mouseClick() {
+    document.getElementById("test").style.color = "yellow";
+}
 </script> 
 </head> 
 <body>
 	<img width="360" height="240" id="stream" src="http://localhost:9998/cp/owner/ANONYMOUS/device/N%2FA/lastImage" />
-	
+	<br />
+	<input id="address" value="52.26.154.254" />
 	<div id="bt-controls" style="margin: auto; padding: 8px; width: 90%; min-width: 240px; max-width: 480px; border: 1px solid black;">
 	
-		<button style="float: left; margin-right: 1%; margin-bottom: 2%; width: 49%; height: 64px; border: 1px solid red">FWD</button>
-		<button style="float: left; margin-left: 1%; margin-bottom: 2%; width: 49%; height: 64px; border: 1px solid green">BACK</button>
+		<button style="float: left; margin-right: 1%; margin-bottom: 2%; width: 49%; height: 64px; border: 1px solid red"
+		 onmousedown="mouseDown(1)">FWD</button>
+		<button style="float: left; margin-left: 1%; margin-bottom: 2%; width: 49%; height: 64px; border: 1px solid green"
+		 onmousedown="mouseDown(2)"">BACK</button>
 		
 		<br style="clear: both" />
 		
-		<button style="float: left; margin-right: 1%; margin-top: 2%; width: 49%; height: 64px; border: 1px solid red">LEFT</button>
-		<button style="float: left; margin-left: 1%; margin-top: 2%; width: 49%; height: 64px; border: 1px solid green">RIGHT</button>
+		<button style="float: left; margin-right: 1%; margin-top: 2%; width: 49%; height: 64px; border: 1px solid red"
+		 onmousedown="mouseDown(3)">LEFT</button>
+		<button style="float: left; margin-left: 1%; margin-top: 2%; width: 49%; height: 64px; border: 1px solid green"
+		 onmousedown="mouseDown(4)">RIGHT</button>
 		
 		<br style="clear: both" />
 		
-		<button style="margin-top: 2%; width: 100%; height: 80px; border: 1px solid red">STOP</button>
+		<button style="margin-top: 2%; width: 100%; height: 80px; border: 1px solid red"  onmousedown="mouseDown(0)">STOP</button>
 		
 	</div>
 	
