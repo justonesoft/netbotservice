@@ -5,11 +5,13 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SocketChannel;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+
 
 /**
  * Receives a buffer and tries to read an image out of it
@@ -41,12 +43,17 @@ public class ImageReader {
 	private List<ImageReadyListener> imageReadyListeners;
 	
 	/**
+	 * TO signal the worker thread that the underlying socket is disconnected so that it stops the work.
+	 */
+	private boolean disconnected = false;
+	
+	/**
 	 * This thread will read from the queue the bytes composing the image and will process them so that the full image can be received.
 	 */
 	private Thread reader = new Thread(new Runnable() {
 		
 		public void run() {
-			while (true) { // TODO maybe not true, leave room for terminating
+			while (!disconnected) { // TODO maybe not true, leave room for terminating
 				byte[] nextChunk = null;
 				try {
 
@@ -99,7 +106,7 @@ public class ImageReader {
 		}
 	}
 	
-	public void readFromChannel(final SocketChannel sc) {
+	public void readFromChannel(final SocketChannel sc) throws ClosedChannelException {
 		try {
 			if (!sc.isOpen()) return;
 			
@@ -111,7 +118,9 @@ public class ImageReader {
 			if (bytesRead < 0) {
 				// this socket channel has been closed
 				sc.close();
-				return;
+				disconnected = true;
+				reader.interrupt();
+				throw new ClosedChannelException();
 			}
 			
 			byte[] source = new byte[bytesRead];
@@ -119,9 +128,12 @@ public class ImageReader {
 			readBB.get(source);
 			
 			processQueue.put(source);
+		} catch (ClosedChannelException e) {
+			throw e;
 		} catch (IOException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
+			
 		} catch (InterruptedException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

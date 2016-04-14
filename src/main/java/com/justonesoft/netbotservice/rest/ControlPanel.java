@@ -67,8 +67,11 @@ public class ControlPanel {
 		}
 		
 		if (targetDevide != null) {
-			targetDevide.sendThis(type);
-			targetDevide.sendThis(command);
+			if (targetDevide.sendThis(type)) { // don't send the command if the type could not be sent
+				targetDevide.sendThis(command); // still flawed if this can not be sent, next "type"
+												// will actually be considered command and we desync with
+												// client
+			}
 		} else {
 			System.out.println("Device not found");
 			throw new WebApplicationException(Status.NOT_FOUND);

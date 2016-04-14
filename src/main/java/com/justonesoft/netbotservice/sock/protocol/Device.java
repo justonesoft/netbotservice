@@ -5,9 +5,11 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.TimeUnit;
 
 public class Device implements ImageReadyListener {
 	private String name;
@@ -21,13 +23,11 @@ public class Device implements ImageReadyListener {
 	private final ImageReader imageReader;
 
 	private final BlockingQueue<Byte> writingQueue = new ArrayBlockingQueue<Byte>(10);
-	private SocketChannel sc;
 
 	public Device(SocketChannel sc) {
 		this();
 		
 		writeToChannel(sc);
-		
 	}
 	public Device() {
 		this.name = "N/A";
@@ -46,10 +46,16 @@ public class Device implements ImageReadyListener {
 	}
 
 	public void readFromChannel(final SocketChannel sc) {
-		imageReader.readFromChannel(sc);
+		try {
+			imageReader.readFromChannel(sc);
+		} catch (ClosedChannelException e) {
+			System.out.println("readFromChannel - disconnected");
+			DeviceRegistry.getInstance().deregister(this);
+		}
 	}
 	
 	public void writeToChannel(final SocketChannel sc) {
+		// TODO use a Thread Manager
 		new Thread(new Runnable() {
 			
 			public void run() {
@@ -57,7 +63,10 @@ public class Device implements ImageReadyListener {
 				while (sc.isConnected()) {
 					try {
 						System.out.println("Waiting for data to write");
-						Byte dataToSend = writingQueue.take();
+						Byte dataToSend = writingQueue.poll(3, TimeUnit.SECONDS); // wake up after 3 seconds, this is so that does not stuck here if socket is closed
+						
+						if (dataToSend == null) continue;
+						
 						System.out.println("Writing " + dataToSend.intValue());
 						buffer.put(dataToSend.byteValue());
 						buffer.rewind();
@@ -66,6 +75,9 @@ public class Device implements ImageReadyListener {
 						}
 						buffer.rewind();
 
+					} catch (ClosedChannelException e) {
+						// return to the while condition that does not hold anymore and exit the loop and thread
+						System.out.println("writeToChannel - disconnected");
 					} catch (InterruptedException e) {
 						// TODO Auto-generated catch block
 						e.printStackTrace();
@@ -79,14 +91,11 @@ public class Device implements ImageReadyListener {
 		}).start();
 	}
 	
-	public void sendThis(byte whatToWrite) {
-		try {
-			System.out.println("Submiting " + whatToWrite + " for writing");
-			writingQueue.put(Byte.valueOf(whatToWrite)); // this will block if nothing consumes the added bytes. for example if SocketChannel gets disconnected
-		} catch (InterruptedException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+	public boolean sendThis(byte whatToWrite) {
+		System.out.println("Submiting " + whatToWrite + " for writing");
+		return writingQueue.offer(Byte.valueOf(whatToWrite)); // this will block if nothing consumes the added bytes. for example if SocketChannel gets disconnected
+		// TODO there is still a problem with this
+		// even if socket gets disconnected this method would not know about and still add data into the queue
 	}
 	
 	/**
