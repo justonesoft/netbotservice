@@ -1,6 +1,8 @@
 package com.justonesoft.netbotservice.rest.html;
 
 import java.io.File;
+import java.net.URI;
+import java.net.URL;
 
 import javax.inject.Singleton;
 import javax.ws.rs.DefaultValue;
@@ -22,7 +24,13 @@ public class StaticPageHandler {
 	@Path("{file}")
 	public Response handleStaticHtml(@PathParam("file") @DefaultValue("index.html") String fileName) {
 		
-		final File fileLocation = new File(CONTEXT, fileName);
+		File fileLocation = new File(CONTEXT, fileName);
+		
+		if (!fileLocation.exists()) {
+			
+			URL fileUri = Thread.currentThread().getContextClassLoader().getResource(fileName);
+			fileLocation = new File(fileUri.getFile());
+		}
 		
 		return Response.ok(fileLocation).build();
 		

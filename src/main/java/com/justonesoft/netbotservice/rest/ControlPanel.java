@@ -2,8 +2,6 @@ package com.justonesoft.netbotservice.rest;
 
 import java.util.List;
 
-import javax.annotation.PostConstruct;
-import javax.ws.rs.Consumes;
 import javax.ws.rs.GET;
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
@@ -14,6 +12,7 @@ import javax.ws.rs.WebApplicationException;
 import javax.ws.rs.core.MediaType;
 import javax.ws.rs.core.Response.Status;
 
+import com.drew.metadata.MetadataException;
 import com.justonesoft.netbotservice.sock.protocol.Device;
 import com.justonesoft.netbotservice.sock.protocol.DeviceRegistry;
 
@@ -30,7 +29,7 @@ public class ControlPanel {
 	@Path("owner/{owner}/device/{device}/lastImage")
 	@Produces("image/jpg")
 	public byte[] lastImage(@PathParam("owner") String owner,
-			@PathParam("device") String deviceName) {
+			@PathParam("device") String deviceName) throws MetadataException {
 		
 		List<Device> devices = DeviceRegistry.getInstance().getDevicesList(owner);
 		
@@ -38,13 +37,33 @@ public class ControlPanel {
 			throw new WebApplicationException(Status.NOT_FOUND);
 		}
 		
+		byte[] lastImage = null;
 		for (Device device : devices) {
 			if (device.getName().equals(deviceName)) {
-				return device.getLastImage();
+				lastImage = device.getLastImage();
 			}
 		}
+		if (lastImage == null) {
+			throw new WebApplicationException(Status.NOT_FOUND);
+		}
 		
-		throw new WebApplicationException(Status.NOT_FOUND);
+//		try {
+//			Metadata metadata = JpegMetadataReader.readMetadata(new ByteArrayInputStream(lastImage));
+//			ExifSubIFDDirectory directory = metadata.getFirstDirectoryOfType(ExifSubIFDDirectory.class);
+//			if (directory != null) {
+//				int orientation = directory.getInt(ExifSubIFDDirectory.TAG_ORIENTATION);
+//				System.out.println("orientation: " + orientation);
+//			}
+//		} catch (JpegProcessingException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//			throw new WebApplicationException(Status.INTERNAL_SERVER_ERROR);
+//		} catch (IOException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//			throw new WebApplicationException(Status.INTERNAL_SERVER_ERROR);
+//		}
+		return lastImage;
 	}
 
 	@POST

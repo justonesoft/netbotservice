@@ -2,6 +2,8 @@ package com.justonesoft.netbotservice.sock.communication;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketOptions;
+import java.net.StandardSocketOptions;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
@@ -42,6 +44,7 @@ public class BridgeSocketServer extends Thread {
 			while (true) {
 				// blocking
 				selector.select();
+//				System.out.println("selector.select()-time: " + System.currentTimeMillis());
 				
 				Set<SelectionKey> selectedKeys = selector.selectedKeys();
 				
@@ -58,7 +61,8 @@ public class BridgeSocketServer extends Thread {
 						ServerSocketChannel serverChannel = (ServerSocketChannel)key.channel();
 						SocketChannel sc = serverChannel.accept();
 						sc.configureBlocking( false );
-						
+						System.out.println("RcvBuffSize: " + sc.getOption(StandardSocketOptions.SO_RCVBUF));
+//						sc.setOption(StandardSocketOptions.SO_RCVBUF, 64 * 1024);
 						Device device = new Device(sc);
 						
 						System.out.println(Thread.currentThread().getName() + " register socket.");
@@ -74,7 +78,7 @@ public class BridgeSocketServer extends Thread {
 
 						
 //						System.out.println(Thread.currentThread().getName() + " start reading thread.");
-						device.readFromChannel(sc);
+						device.readFromChannel(sc, selector);
 					}
 					
 //					if (key.isValid() && key.isWritable()) {

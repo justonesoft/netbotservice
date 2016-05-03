@@ -3,66 +3,82 @@
 <head>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script type="text/javascript" src="scripts%2Fjquery-1.12.3.min.js"> </script>
+<script type="text/javascript" src="scripts%2Fjquery-rotate.min.js"> </script>
 
 <script type="text/javascript"> 
 var delay=0.5;
 var Mutex = 0;
-var url="http://localhost:9998/cp/owner/ANONYMOUS/device/N%2FA/lastImage";
+
+var SERVER="www.gizmo-hub.com";
+var PORT="9998";
+var URI="/cp/owner/ANONYMOUS/device/N%2FA/lastImage";
+var URL="http://"+SERVER+":"+PORT+URI;
+var REFRESH_MILLIS = 300;
+var STOP=0;
 
 var counter = 0;
 function load_jpeg()
 {
-      if(Mutex == 0)
-      {
-            Mutex = 1;
-			var time = (new Date()).getTime();
-            document.getElementById("stream").src = url+"?_=" + time;
-            setTimeout('load_jpeg()',delay*1000);
-            Mutex = 0;
-       }
+	REFRESH_MILLIS = document.getElementById("refresh").value;
+    if(Mutex == 0)
+    {
+    	Mutex = 1;
+		var time = (new Date()).getTime();
+        document.getElementById("stream").src = URL+"?_=" + time;
+        setTimeout('load_jpeg()',REFRESH_MILLIS);
+        Mutex = 0;
+    }
 }
 
-//setTimeout('load_jpeg()',1000);
+setTimeout('load_jpeg()',REFRESH_MILLIS);
 function mouseDown(cmd) {
-	var serverAddress = document.getElementById("address").value;
 	$.ajax({
-		  	url: "http://"+serverAddress+":9998/cp/owner/ANONYMOUS/device/N%2FA/sendCommand?_="+new Date().getTime()+"&type=1&cmd="+cmd,
+		  	url: "http://"+SERVER+":"+PORT+"/cp/owner/ANONYMOUS/device/N%2FA/sendCommand?_="+new Date().getTime()+"&type=1&cmd="+cmd,
 			method: "POST"
 	});
 }
 
 function mouseUp() {
-    document.getElementById("test").style.color = "green";
+	$.ajax({
+		  	url: "http://"+SERVER+":"+PORT+"/cp/owner/ANONYMOUS/device/N%2FA/sendCommand?_="+new Date().getTime()+"&type=1&cmd="+STOP,
+			method: "POST"
+	});
 }
-
-function mouseClick() {
-    document.getElementById("test").style.color = "yellow";
+function applyRotate() {
+	$("#stream").rotate(parseInt(document.getElementById("rotate").value));
 }
 </script> 
 </head> 
 <body>
-	<img width="360" height="240" id="stream" src="http://localhost:9998/cp/owner/ANONYMOUS/device/N%2FA/lastImage" />
-	<br />
-	<input id="address" value="52.26.154.254" />
-	<div id="bt-controls" style="margin: auto; padding: 8px; width: 90%; min-width: 240px; max-width: 480px; border: 1px solid black;">
+	<img id="stream" src="" />
+	<br /><br /><br /><br />
 	
-		<button style="float: left; margin-right: 1%; margin-bottom: 2%; width: 49%; height: 64px; border: 1px solid red"
-		 onmousedown="mouseDown(1)">FWD</button>
-		<button style="float: left; margin-left: 1%; margin-bottom: 2%; width: 49%; height: 64px; border: 1px solid green"
-		 onmousedown="mouseDown(2)"">BACK</button>
+	Refresh in millis: <input id="refresh" value="300" />
+	<br />
+	Rotate: <input id="rotate" value="90" /> <button onclick="applyRotate()">Apply</button>
+	
+	<br /><br />
+	<div id="bt-controls" style="padding: 8px; max-width: 480px;">
+	
+		<button style="float: left; margin-right: 1%; margin-bottom: 2%; width: 39%; height: 32px; border: 1px solid green"
+		 onmousedown="mouseDown(1)" onmouseup="mouseUp()">FWD</button>
+		<button style="float: left; margin-left: 1%; margin-bottom: 2%; width: 39%; height: 32px; border: 1px solid green"
+		 onmousedown="mouseDown(2)" onmouseup="mouseUp()">BACK</button>
 		
 		<br style="clear: both" />
 		
-		<button style="float: left; margin-right: 1%; margin-top: 2%; width: 49%; height: 64px; border: 1px solid red"
-		 onmousedown="mouseDown(3)">LEFT</button>
-		<button style="float: left; margin-left: 1%; margin-top: 2%; width: 49%; height: 64px; border: 1px solid green"
-		 onmousedown="mouseDown(4)">RIGHT</button>
+		<button style="float: left; margin-right: 1%; margin-top: 2%; width: 39%; height: 32px; border: 1px solid red"
+		 onmousedown="mouseDown(3)" onmouseup="mouseUp()">LEFT</button>
+		<button style="float: left; margin-left: 1%; margin-top: 2%; width: 39%; height: 32px; border: 1px solid red"
+		 onmousedown="mouseDown(4)" onmouseup="mouseUp()">RIGHT</button>
 		
 		<br style="clear: both" />
 		
-		<button style="margin-top: 2%; width: 100%; height: 80px; border: 1px solid red"  onmousedown="mouseDown(0)">STOP</button>
+		<button style="margin-top: 2%; width: 80%; height: 80px; border: 1px solid red"  onmousedown="mouseDown(0)">STOP</button>
 		
 	</div>
 	
-	
+	<script type="text/javascript">
+		applyRotate();
+	</script>
 </html>

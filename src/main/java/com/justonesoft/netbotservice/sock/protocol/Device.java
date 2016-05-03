@@ -6,6 +6,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
+import java.nio.channels.Selector;
 import java.nio.channels.SocketChannel;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
@@ -45,9 +46,9 @@ public class Device implements ImageReadyListener {
 		imageReader.registerImageReadyListener(this);
 	}
 
-	public void readFromChannel(final SocketChannel sc) {
+	public void readFromChannel(final SocketChannel sc, Selector selector) {
 		try {
-			imageReader.readFromChannel(sc);
+			imageReader.readFromChannel(sc, selector);
 		} catch (ClosedChannelException e) {
 			System.out.println("readFromChannel - disconnected");
 			DeviceRegistry.getInstance().deregister(this);
@@ -62,7 +63,7 @@ public class Device implements ImageReadyListener {
 				ByteBuffer buffer = ByteBuffer.allocate(1);
 				while (sc.isConnected()) {
 					try {
-						System.out.println("Waiting for data to write");
+//						System.out.println("Waiting for data to write");
 						Byte dataToSend = writingQueue.poll(3, TimeUnit.SECONDS); // wake up after 3 seconds, this is so that does not stuck here if socket is closed
 						
 						if (dataToSend == null) continue;
