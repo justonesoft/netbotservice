@@ -62,6 +62,9 @@ public class BridgeSocketServer extends Thread {
 						SocketChannel sc = serverChannel.accept();
 						sc.configureBlocking( false );
 						System.out.println("RcvBuffSize: " + sc.getOption(StandardSocketOptions.SO_RCVBUF));
+						System.out.println("TcpNodelay-before: " + sc.getOption(StandardSocketOptions.TCP_NODELAY));
+						sc.setOption(StandardSocketOptions.TCP_NODELAY, Boolean.TRUE);
+						System.out.println("TcpNodelay-before: " + sc.getOption(StandardSocketOptions.TCP_NODELAY));
 //						sc.setOption(StandardSocketOptions.SO_RCVBUF, 64 * 1024);
 						Device device = new Device(sc);
 						
