@@ -1,9 +1,13 @@
 package com.justonesoft.netbotservice.sock.protocol;
 
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayInputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
@@ -16,6 +20,8 @@ import java.util.Set;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
+
+import javax.imageio.ImageIO;
 
 
 /**
@@ -100,7 +106,6 @@ public class ImageReader {
 	}
 	
 	private void notifyImageReady() {
-		long start  = System.currentTimeMillis();
 		if (imageBuffer == null) return;
 
 		byte[] imageData = new byte[currentImageSize];
@@ -113,6 +118,9 @@ public class ImageReader {
 		for (ImageReadyListener listener : imageReadyListeners) {
 			listener.onImageReady(event);
 		}
+		
+		long start  = System.currentTimeMillis();
+//		System.out.println("TransformImageDuration: " + (System.currentTimeMillis() - start));
 	}
 	
 	public void readFromChannel(final SocketChannel sc, Selector selector) throws ClosedChannelException {
@@ -121,6 +129,8 @@ public class ImageReader {
 			readBB.rewind();
 			int bytesRead = sc.read(readBB);
 			if (bytesRead == 0) return;
+			
+//			System.out.println("IntialBytesRead: " + bytesRead);
 			
 			if (bytesRead < 0) {
 				// this socket channel has been closed
@@ -135,7 +145,7 @@ public class ImageReader {
 				bytesRead = sc.read(readBB);
 				totalRead += bytesRead;
 			}
-//			System.out.println("TotalBytesRead: " + totalRead + ", ZeroBytesRetry: " + zeroBytesRetry);
+//			System.out.println("TotalBytesRead: " + totalRead);
 			
 			byte[] source = new byte[readBB.position()];
 			readBB.rewind();
@@ -161,8 +171,8 @@ public class ImageReader {
 		switch (state) {
 		
 		case NONE:
-			System.out.println("Start new frame");
-			start = System.currentTimeMillis();
+//			System.out.println("Start new frame");
+//			start = System.currentTimeMillis();
 			// should read the image size in 4 bytes
 			
 			if (source.length >= IMAGE_LENGTH_BYTES) {
@@ -171,7 +181,7 @@ public class ImageReader {
 				imageSizeBuffer.put(source, 0, IMAGE_LENGTH_BYTES);
 				imageSizeBuffer.rewind();
 				currentImageSize = imageSizeBuffer.getInt();
-//				System.out.println("NONE - Image size: " + currentImageSize);
+				System.out.println("Image size: " + currentImageSize);
 				imageBuffer = ByteBuffer.allocate(currentImageSize);
 
 				state = ReadState.FRAME_COUNT; // we can now read the image data
@@ -236,7 +246,6 @@ public class ImageReader {
 				}
 				state = ReadState.NONE;
 				imageReady();
-				System.out.println("Image ready duration millis: " + (System.currentTimeMillis() - start));
 				reset();
 				if (source.length > bytesNeededForCompleteImage) {
 					// there is more data left to process, from the next picture probably
@@ -254,22 +263,15 @@ public class ImageReader {
 		}	
 	}
 	
-	private void saveAsFile() {
+	private void saveAsFile(byte[] imageData) {
 		String fileName = "image_"+System.currentTimeMillis()+".jpg";
 		try {
+		
 			FileOutputStream fos = new FileOutputStream(new File(fileName));
-			
-			imageBuffer.rewind();
-			for (int i=0; i<currentImageSize; i++) {
-				byte b = imageBuffer.get();
-				fos.write(b);
-				System.out.print(b + ", ");
-			}
-			
+			fos.write(imageData);
 			fos.flush();
 			fos.close();
-			
-			imageBuffer.rewind();
+		    
 		} catch (FileNotFoundException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

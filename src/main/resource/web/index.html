@@ -12,7 +12,9 @@ var Mutex = 0;
 var SERVER="www.gizmo-hub.com";
 var PORT="9998";
 var URI="/cp/owner/ANONYMOUS/device/N%2FA/lastImage";
+var MJPG_STREAM_URI="/cp/owner/ANONYMOUS/device/N%2FA/stream";
 var URL="http://"+SERVER+":"+PORT+URI;
+var MJPG_URL="http://"+SERVER+":"+PORT+MJPG_STREAM_URI;
 var REFRESH_MILLIS = 300;
 var STOP=0;
 
@@ -44,13 +46,20 @@ function mouseUp() {
 			method: "POST"
 	});
 }
+function startMJPGStream() {
+	document.getElementById("streamMJPG").src=MJPG_URL+"/"+document.getElementById("streamId").value+"/lastImage";
+}
+
 function applyRotate() {
 	$("#stream").rotate(parseInt(document.getElementById("rotate").value));
+	$("#streamMJPG").rotate(parseInt(document.getElementById("rotate").value));
 }
 </script> 
 </head> 
 <body>
 	<img id="stream" src="" />
+	<img id="streamMJPG" src="" /> StreamId: <input id="streamId" value="id:300" /><button onclick="startMJPGStream()">Start</button>
+	
 	<br /><br /><br /><br />
 	
 	Refresh in millis: <input id="refresh" value="300" />
