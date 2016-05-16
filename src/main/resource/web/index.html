@@ -33,33 +33,25 @@ function load_jpeg()
 }
 
 setTimeout('load_jpeg()',REFRESH_MILLIS);
-function mouseDown(cmd) {
-	$.ajax({
-		  	url: "http://"+SERVER+":"+PORT+"/cp/owner/ANONYMOUS/device/N%2FA/sendCommand?_="+new Date().getTime()+"&type=1&cmd="+cmd,
-			method: "POST"
-	});
-}
 
-function mouseUp() {
+function sendCommand(type, cmd) {
 	$.ajax({
-		  	url: "http://"+SERVER+":"+PORT+"/cp/owner/ANONYMOUS/device/N%2FA/sendCommand?_="+new Date().getTime()+"&type=1&cmd="+STOP,
+		  	url: "http://"+SERVER+":"+PORT+"/cp/owner/ANONYMOUS/device/N%2FA/sendCommand?_="+new Date().getTime()+"&type="+type+"&cmd="+cmd,
 			method: "POST"
 	});
-}
-function startMJPGStream() {
-	document.getElementById("streamMJPG").src=MJPG_URL+"/"+document.getElementById("streamId").value+"/lastImage";
 }
 
 function applyRotate() {
 	$("#stream").rotate(parseInt(document.getElementById("rotate").value));
-	$("#streamMJPG").rotate(parseInt(document.getElementById("rotate").value));
 }
 </script> 
 </head> 
 <body>
-	<img id="stream" src="" />
-	<img id="streamMJPG" src="" /> StreamId: <input id="streamId" value="id:300" /><button onclick="startMJPGStream()">Start</button>
+	<img id="stream" src="" /> 
 	
+	<div>
+		<button onclick="sendCommand(4,5)">Start Streaming</button> <button onclick="sendCommand(4,0)">Stop Streaming</button>
+	</div>
 	<br /><br /><br /><br />
 	
 	Refresh in millis: <input id="refresh" value="300" />
@@ -70,20 +62,20 @@ function applyRotate() {
 	<div id="bt-controls" style="padding: 8px; max-width: 480px;">
 	
 		<button style="float: left; margin-right: 1%; margin-bottom: 2%; width: 39%; height: 32px; border: 1px solid green"
-		 onmousedown="mouseDown(1)" onmouseup="mouseUp()">FWD</button>
+		 onmousedown="sendCommand(1,1)" onmouseup="sendCommand(1,0)">FWD</button>
 		<button style="float: left; margin-left: 1%; margin-bottom: 2%; width: 39%; height: 32px; border: 1px solid green"
-		 onmousedown="mouseDown(2)" onmouseup="mouseUp()">BACK</button>
+		 onmousedown="sendCommand(1,2)" onmouseup="sendCommand(1,0)">BACK</button>
 		
 		<br style="clear: both" />
 		
 		<button style="float: left; margin-right: 1%; margin-top: 2%; width: 39%; height: 32px; border: 1px solid red"
-		 onmousedown="mouseDown(3)" onmouseup="mouseUp()">LEFT</button>
+		 onmousedown="sendCommand(1,3)" onmouseup="sendCommand(1,0)">LEFT</button>
 		<button style="float: left; margin-left: 1%; margin-top: 2%; width: 39%; height: 32px; border: 1px solid red"
-		 onmousedown="mouseDown(4)" onmouseup="mouseUp()">RIGHT</button>
+		 onmousedown="sendCommand(1,4)" onmouseup="sendCommand(1,0)">RIGHT</button>
 		
 		<br style="clear: both" />
 		
-		<button style="margin-top: 2%; width: 80%; height: 80px; border: 1px solid red"  onmousedown="mouseDown(0)">STOP</button>
+		<button style="margin-top: 2%; width: 80%; height: 80px; border: 1px solid red"  onmousedown="sendCommand(1,0)">STOP</button>
 		
 	</div>
 	
