@@ -11,14 +11,21 @@ var Mutex = 0;
 
 var SERVER="www.gizmo-hub.com";
 var PORT="9998";
-var URI="/cp/owner/ANONYMOUS/device/N%2FA/lastImage";
-var MJPG_STREAM_URI="/cp/owner/ANONYMOUS/device/N%2FA/stream";
-var URL="http://"+SERVER+":"+PORT+URI;
-var MJPG_URL="http://"+SERVER+":"+PORT+MJPG_STREAM_URI;
+var REST_DEVICE_URL = "http://" + SERVER + ":" + PORT + "/cp/owner/ANONYMOUS/device/N%2FA/";
+
+var REST_MJPG_STREAM="lastImage";
+var REST_SEND_COMMAND="sendCommand";
+
+var MJPG_URL= REST_DEVICE_URL + REST_MJPG_STREAM;
+var SENDCOMMAND_URL = REST_DEVICE_URL + REST_SEND_COMMAND;
+
 var REFRESH_MILLIS = 300;
 var STOP=0;
 
-var counter = 0;
+var STREAMING_COMMAND_TYPE = 4;
+var STREAMING_COMMAND = 5;
+
+var timeoutID = 0;
 function load_jpeg()
 {
 	REFRESH_MILLIS = document.getElementById("refresh").value;
@@ -26,17 +33,29 @@ function load_jpeg()
     {
     	Mutex = 1;
 		var time = (new Date()).getTime();
-        document.getElementById("stream").src = URL+"?_=" + time;
+        document.getElementById("stream").src = MJPG_URL+"?_=" + time;
         setTimeout('load_jpeg()',REFRESH_MILLIS);
         Mutex = 0;
     }
 }
 
-setTimeout('load_jpeg()',REFRESH_MILLIS);
+//setTimeout('load_jpeg()',REFRESH_MILLIS);
+
+function startStreaming() {
+	Mutex = 0;
+	timeoutID = setTimeout('load_jpeg()',REFRESH_MILLIS);
+	sendCommand(STREAMING_COMMAND_TYPE, STREAMING_COMMAND);
+}
+
+function stopStreaming() {
+	Mutex = 1;
+	clearTimeout(timeoutID);
+	sendCommand(STREAMING_COMMAND_TYPE, STOP);
+}
 
 function sendCommand(type, cmd) {
 	$.ajax({
-		  	url: "http://"+SERVER+":"+PORT+"/cp/owner/ANONYMOUS/device/N%2FA/sendCommand?_="+new Date().getTime()+"&type="+type+"&cmd="+cmd,
+		  	url: SENDCOMMAND_URL + "?_="+new Date().getTime()+"&type="+type+"&cmd="+cmd,
 			method: "POST"
 	});
 }
@@ -49,8 +68,8 @@ function applyRotate() {
 <body>
 	<img id="stream" src="" /> 
 	
-	<div>
-		<button onclick="sendCommand(4,5)">Start Streaming</button> <button onclick="sendCommand(4,0)">Stop Streaming</button>
+	<div style="margin-top: 15px">
+		<button onclick="startStreaming()">Start Streaming</button> <button onclick="stopStreaming()">Stop Streaming</button>
 	</div>
 	<br /><br /><br /><br />
 	
